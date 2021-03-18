@@ -1,0 +1,24 @@
+{
+  "name": "label-unique-across-pull-requests-action",
+  "version": "1.0.0",
+  "description": "Github action which ensures that only one pull request has a specific label at a time",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BeOpinion/label-unique-across-pull-requests-action.git"
+  },
+  "keywords": [],
+  "author": "Cyprien Pannier",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BeOpinion/label-unique-across-pull-requests-action/issues"
+  },
+  "homepage": "https://github.com/BeOpinion/label-unique-across-pull-requests-action#readme",
+  "dependencies": {
+    "@actions/core": "^1.2.6",
+    "@actions/github": "^4.0.0"
+  }
+}

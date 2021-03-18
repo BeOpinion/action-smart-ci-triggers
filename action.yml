@@ -1,0 +1,14 @@
+name: 'Label unique across pull requests'
+description: 'Github action which ensures that only one pull request has a specific label at a time, if a label is added on a PR, it will be removed from the other PRs'
+inputs:
+  github-token:
+    required: true
+  unique-labels:
+    description: 'The labels that should be unique (as a comma separated string)'
+    required: true
+outputs:
+  pr-unique-labels:
+    description: 'The unique labels that the pull request actually has'
+runs:
+  using: 'node12'
+  main: 'index.js'

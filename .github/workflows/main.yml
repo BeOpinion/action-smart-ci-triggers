@@ -1,0 +1,22 @@
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+
+jobs:
+  test_job:
+    runs-on: ubuntu-latest
+    name: test the github action
+    steps:
+      # To use this repository's private action,
+      # you must check out the repository
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: unique labels action step
+        uses: ./ # Uses an action in the root directory
+        id: unique-labels
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          unique-labels: 'stage1, stage2'
+      # Use the output from the `unique-labels` step
+      - name: Get the pull request unique labels
+        run: echo "The unique labels are ${{ steps.unique-labels.outputs.pr-unique-labels }}"
