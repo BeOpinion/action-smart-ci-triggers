@@ -29,4 +29,9 @@ jobs:
           env-label: 'stage1'
       - name: actual deploy on stage1
         if: ${{ steps.check-deploy-stage1.outputs.should-deploy == 'true' }}
-        run: echo "deploy stage1 $GITHUB_REF"
+        env:
+          SLACK_WEBHOOK: ${{ secrets.STAGING_SLACK_WEBHOOK }}
+          SLACK_USERNAME: staging botte
+        uses: Ilshidur/action-slack@2.1.0
+        with:
+          args: "$GITHUB_REPOSITORY ($GITHUB_REF) has been deployed on the staging"
