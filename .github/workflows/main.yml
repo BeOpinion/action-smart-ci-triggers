@@ -27,11 +27,12 @@ jobs:
           action-github-token: ${{ secrets.GITHUB_TOKEN }}
           personal-github-token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
           env-label: 'stage1'
-      - name: actual deploy on stage1
+      - name: Notify slack success
         if: ${{ steps.check-deploy-stage1.outputs.should-deploy == 'true' }}
         env:
-          SLACK_WEBHOOK: ${{ secrets.STAGING_SLACK_WEBHOOK }}
-          SLACK_USERNAME: staging botte
-        uses: Ilshidur/action-slack@2.1.0
+          SLACK_BOT_TOKEN: ${{ secrets.STAGING_SLACK_BOT_TOKEN }}
+        uses: voxmedia/github-action-slack-notify-build@v1
         with:
-          args: "$GITHUB_REPOSITORY ($GITHUB_REF) has been deployed on the staging"
+          channel: staging
+          status: SUCCESS
+          color: good
