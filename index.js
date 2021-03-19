@@ -75,7 +75,7 @@ async function onPull() {
         ghApi.issues.removeLabel({
           ...github.context.repo,
           issue_number: pull.number,
-          name: uniqueLabel
+          name: envLabel
         })
       }
     })
