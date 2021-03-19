@@ -1,0 +1,24 @@
+{
+  "name": "action-smart-ci-triggers",
+  "version": "1.0.0",
+  "description": "Github action to smartly trigger CI based on the use of pull request labels",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BeOpinion/action-smart-ci-triggers.git"
+  },
+  "keywords": [],
+  "author": "Cyprien Pannier",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BeOpinion/action-smart-ci-triggers/issues"
+  },
+  "homepage": "https://github.com/BeOpinion/action-smart-ci-triggers#readme",
+  "dependencies": {
+    "@actions/core": "^1.2.6",
+    "@actions/github": "^4.0.0"
+  }
+}
