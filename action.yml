@@ -1,14 +1,18 @@
-name: 'Label unique across pull requests'
-description: 'Github action which ensures that only one pull request has a specific label at a time, if a label is added on a PR, it will be removed from the other PRs'
+name: 'Smart CI trigger using label as environment name'
+description: 'Github action which ensures that only one pull request has the environment label at a time, and outputs if the CI environment (label) should be deployed.'
 inputs:
-  github-token:
+  action-github-token:
+    description: 'the github token provided by the action which will not trigger other actions'
     required: true
-  unique-labels:
-    description: 'The labels that should be unique (as a comma separated string)'
+  personal-github-token:
+    description: 'the personal token that the user should use'
+    required: true
+  env-label:
+    description: 'The label corresponding to the CI environment'
     required: true
 outputs:
-  pr-unique-labels:
-    description: 'The unique labels that the pull request actually has'
+  should-deploy:
+    description: 'returns "true" if the current ref should be deployed on the CI environment, "false" otherwise'
 runs:
   using: 'node12'
   main: 'index.js'
