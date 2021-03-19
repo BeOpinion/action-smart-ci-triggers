@@ -25,7 +25,7 @@ jobs:
         id: check-deploy-stage1
         with:
           action-github-token: ${{ secrets.GITHUB_TOKEN }}
-          personal-github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          personal-github-token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
           env-label: 'stage1'
       - name: actual deploy on stage1
         if: ${{ steps.check-deploy-stage1.outputs.should-deploy == 'true' }}
