@@ -55,7 +55,7 @@ async function onPushMain() {
 // on pull action, remove the envLabel from other pull requests if needed
 // webhook event = pull_request, activity type = opened, reopened, synchronize, labeled
 async function onPull() {
-  const ghApi = github.getOctokit(githubToken)
+  const ghApi = github.getOctokit(actionGithubToken)
 
   const actionPullNumber = github.context.payload.pull_request.number;
 
