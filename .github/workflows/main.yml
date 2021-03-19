@@ -5,7 +5,7 @@ on:
   pull_request:
     branches:
       - main
-    types: [opened, reopened, synchronize, labeled, unlabeled]
+    types: [synchronize, labeled, unlabeled]
   issues:
     types: [unlabeled]
   repository_dispatch:
@@ -27,12 +27,12 @@ jobs:
           action-github-token: ${{ secrets.GITHUB_TOKEN }}
           personal-github-token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
           env-label: 'stage1'
-      - name: Notify slack success
-        if: ${{ steps.check-deploy-stage1.outputs.should-deploy == 'true' }}
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_BOT_TOKEN: ${{ secrets.STAGING_SLACK_BOT_TOKEN }}
-        uses: voxmedia/github-action-slack-notify-build@v1
-        with:
-          channel_id: C01RFECTNDD
-          status: SUCCESS
-          color: good
+          SLACK_WEBHOOK: ${{ secrets.STAGING_SLACK_WEBHOOK }}
+          SLACK_USERNAME: App deploy notifier
+          SLACK_ICON_EMOJI: 
+          SLACK_TITLE: Deployed ${{ github.repositoy }} ${{ github.ref }} on staging
+          MSG_MINIMAL: ref, commit
+
