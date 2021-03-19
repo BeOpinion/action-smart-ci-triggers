@@ -14,7 +14,9 @@ async function onLabelRemoved() {
 
   const labelRemoved = github.context.payload.label.name;
 
+  console.log('debug label removed', labelRemoved)
   if (labelRemoved === envLabel) {
+    console.log('triggering trigger_main_workflow')
     ghApi.repos.createDispatchEvent({
       ...github.context.repo,
       event_type: 'trigger_main_workflow',
