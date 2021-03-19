@@ -25,8 +25,14 @@ jobs:
         id: check-deploy-stage1
         with:
           action-github-token: ${{ secrets.GITHUB_TOKEN }}
-          personal-github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          personal-github-token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
           env-label: 'stage1'
-      - name: actual deploy on stage1
+      - name: Notify slack success
         if: ${{ steps.check-deploy-stage1.outputs.should-deploy == 'true' }}
-        run: echo "deploy stage1 $GITHUB_REF"
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.STAGING_SLACK_BOT_TOKEN }}
+        uses: voxmedia/github-action-slack-notify-build@v1
+        with:
+          channel_id: C01RFECTNDD
+          status: SUCCESS
+          color: good
