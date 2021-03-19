@@ -12,9 +12,9 @@ const envLabel = core.getInput('env-label');
 async function onLabelRemoved() {
   const ghApi = github.getOctokit(personalGithubToken);
 
-  const { action, label: { name } } = github.context.payload.label;
+  const { action, label: { name } } = github.context.payload;
 
-  if (action === 'deleted' && name === envLabel) {
+  if (action === 'unlabeled' && name === envLabel) {
     ghApi.repos.createDispatchEvent({
       ...github.context.repo,
       event_type: 'trigger_main_workflow',
@@ -88,12 +88,12 @@ async function run() {
   try {
     if (github.context.eventName === 'pull_request') {
       await onPull()
-    } else if (github.context.eventName === 'label') {
-      await onLabelRemoved()
     } else if (github.context.eventName === 'repository_dispatch') {
       await onTriggerMain()
     } else if (github.context.eventName === 'push') {
       await onPushMain()
+    } else if (github.context.eventName === 'issues') {
+      await onLabelRemoved()
     }
   } catch (error) {
     console.error(error)
