@@ -33,6 +33,6 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.STAGING_SLACK_BOT_TOKEN }}
         uses: voxmedia/github-action-slack-notify-build@v1
         with:
-          channel: staging
+          channel_id: C01RFECTNDD
           status: SUCCESS
           color: good
