@@ -25,4 +25,4 @@ jobs:
           env-label: 'stage1'
       - name: actual deploy on stage1
         if: ${{ steps.check-deploy-stage1.outputs.should-deploy == 'true' }}
-        run: echo "deploy stage1 GITHUB_REF"
+        run: echo "deploy stage1 $GITHUB_REF"
