@@ -15,4 +15,4 @@ outputs:
     description: 'returns "true" if the current ref should be deployed on the CI environment, "false" otherwise'
 runs:
   using: 'node16'
-  main: 'index.js'
+  main: 'dist/index.js'
