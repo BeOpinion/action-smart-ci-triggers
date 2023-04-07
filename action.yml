@@ -14,5 +14,5 @@ outputs:
   should-deploy:
     description: 'returns "true" if the current ref should be deployed on the CI environment, "false" otherwise'
 runs:
-  using: 'node12'
+  using: 'node16'
   main: 'index.js'
