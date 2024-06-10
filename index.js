@@ -60,6 +60,12 @@ async function onPull() {
   const pulls = await ghApi.pulls.list({ ...github.context.repo });
 
   const actionPull = pulls.data.find(pull => pull.number === actionPullNumber);
+
+  if (!actionPull) {
+    console.warn('Pull request not found');
+    return core.setOutput('should-deploy', false);
+  }
+
   const hasEnvLabel = actionPull.labels.map(l => l.name).includes(envLabel);
 
   if (hasEnvLabel) {

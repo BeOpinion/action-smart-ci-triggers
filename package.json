@@ -4,6 +4,7 @@
   "description": "Github action to smartly trigger CI based on the use of pull request labels",
   "main": "index.js",
   "scripts": {
+    "build": "ncc build index.js -o dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
