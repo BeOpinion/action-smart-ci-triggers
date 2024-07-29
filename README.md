@@ -1,44 +1,69 @@
 # Github action: smart CI triggers
 
-Code state: POC
+## Overview
 
-The idea is to let users add labels on pull requests, like "stage1" and trigger deployments on every subsequent push to this PR. 
+This action checks return contexts (see [Concepts](#Concepts)) according to labels on opened pull requests.
 
-If a user adds the same label on another PR, it removes the old one and deploys that other PR from now on.
+The behavior of the action depends on the event that triggered the workflow:
 
-When the user wants to deploy the main branch on stage1 instead, he justs removes the label from the PR, and a workflow is triggered on the main branch.
+- **push (main or master branch)**: The action return the contexts associated with the labels of all opened pull requests.
+- **pull_request (opened, synchronize, labeled)**: The action return the contexts associated with the labels of the pull request.
+- **pull_request (unlabeled)**: The action return the contexts associated with the label that was removed from the pull request.
+
+## Concepts
+
+- **Context**: A context is a JSON formated string that contains the following keys:
+
+  - `environment`: The environment designated by the label
+  - `service`: The service designated by the label
+
+This action return an array of contexts under the `contexts` output. Output example:
+
+```json
+[
+  {
+    "environment": "staging",
+    "service": "api"
+  },
+  {
+    "environment": "staging",
+    "service": "web"
+  }
+]
+```
+
+## Example
 
 Here an example workflow file:
+
 ```
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
-    types: [synchronize, labeled, unlabeled]
-  repository_dispatch:
-    types: [trigger_main_workflow]
+    types:
+      - opened
+      - synchronize
+      - labeled
 
 jobs:
-  deploy_stage1_job:
+  deploy:
     runs-on: ubuntu-latest
-    name: deploy on stage1
+    name: Deploy
     steps:
-      - name: check deploy stage1
-        uses: @BeOpinion/action-smart-ci-triggers
-        id: check-deploy-stage1
+      - name: Get contexts
+        uses: @BeOpinion/action-smart-ci-triggers@v3.0.0
+        id: get-contexts
         with:
-          action-github-token: ${{ secrets.GITHUB_TOKEN }}
-          personal-github-token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
-          env-label: 'stage1'
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Deploy
-        if: ${{ steps.check-deploy-stage1.outputs.should-deploy == 'true' }}
         uses: rtCamp/action-slack-notify@v2.1.3
+        strategy:
+          matrix:
+            context: ${{ fromJSON(steps.get-contexts.outputs.contexts) }}
         env:
           SLACK_WEBHOOK: ${{ secrets.STAGING_SLACK_WEBHOOK }}
-          SLACK_TITLE: STAGING - ${{ github.repository }}
-          SLACK_FOOTER: 
+          SLACK_TITLE: ${{ matrix.context.environment }} - ${{ matrix.context.service }}
+          SLACK_FOOTER: ""
           MSG_MINIMAL: ref,actions url
 ```

@@ -1,104 +1,147 @@
-const core = require('@actions/core');
-const github = require('@actions/github');
+// Description: This action is used to determine if a service should be deployed based on labels on pull requests.
+// The action will output a payload which a JSON string in the format of:
+// [
+//   {
+//     "environment": "stage",
+//     "service": "data-preview",
+//   },
+//   ...
+// ]
 
-// @doc https://docs.github.com/en/actions/reference/events-that-trigger-workflows
+const core = require("@actions/core");
+const github = require("@actions/github");
 
-const actionGithubToken = core.getInput('action-github-token');
-const personalGithubToken = core.getInput('personal-github-token');
-const envLabel = core.getInput('env-label');
+const actionGithubToken = core.getInput("token");
 
-// if the label is removed from a PR, trigger a workflow on main to let him deploy the label
-// webook event = label, activity type = deleted
+// Return the contexts based on the label that was removed
 async function onLabelRemoved() {
-  const ghApi = github.getOctokit(personalGithubToken);
-
   const labelRemoved = github.context.payload.label.name;
 
-  if (labelRemoved === envLabel) {
-    ghApi.repos.createDispatchEvent({
-      ...github.context.repo,
-      event_type: 'trigger_main_workflow',
-      client_payload: {
-        envLabel
-      }
-    });
+  // Not a valid label. Do nothing.
+  if (labelRemoved.split("-").length !== 2) {
+    return;
   }
 
-  core.setOutput('should-deploy', false);
+  const [environment, service] = labelRemoved.toLowerCase().split("-");
+
+  core.setOutput(
+    "contexts",
+    labelRemoved.toLowerCase().split("-").length === 2
+      ? [
+          {
+            environment,
+            service,
+          },
+        ]
+      : []
+  );
 }
 
-// if the workflow has been triggered by a label removed, we should deploy main on the labelEnv
-// webook event = repository_dispatch, activity type = trigger_main_workflow
-async function onTriggerMain() {
-  const labelToDeploy = github.context.payload.client_payload.envLabel;
-
-  core.setOutput('should-deploy', envLabel === labelToDeploy);
-}
-
-// on every push on master, deploy on labelEnv if not already in a PR
-// webook event = push
+// Return the contexts based on the labels of all open pull requests
 async function onPushMain() {
   const ghApi = github.getOctokit(actionGithubToken);
 
-  if (github.context.ref === 'refs/heads/main' || github.context.ref === 'refs/heads/master') {
-    // check that no open pull request has the envLabel
-    const pulls = await ghApi.pulls.list({ ...github.context.repo, state: "open" });
-    const isLabelOnPulls = pulls.data.some(pull => pull.labels.some(({ name }) => name === envLabel));
-    core.setOutput('should-deploy', !isLabelOnPulls);
-  } else {
-    core.setOutput('should-deploy', false);
-  }
+  const pullRequests = await ghApi.pulls.list({
+    ...github.context.repo,
+    state: "open",
+  });
+
+  const labels = [
+    ...new Set(
+      pullRequests.data
+        .map((pullRequest) =>
+          pullRequest.labels
+            .map((label) => label.name)
+            .filter((label) => label !== undefined)
+        )
+        .flat()
+    ),
+  ];
+
+  core.setOutput(
+    "contexts",
+    labels
+      .filter(
+        (label) => (label.name || "").toLowerCase().split("-").length === 2
+      )
+      .map((label) => {
+        const [environment, service] = (label.name || "")
+          .toLowerCase()
+          .split("-");
+        return {
+          environment,
+          service,
+        };
+      })
+  );
 }
 
-// on pull action, remove the envLabel from other pull requests if needed
-// webhook event = pull_request, activity type = opened, reopened, synchronize, labeled
+// Return the contexts based on the labels of the current pull request and remove the labels from other pull requests
 async function onPull() {
   const ghApi = github.getOctokit(actionGithubToken);
+  const pullRequests = await ghApi.pulls.list({
+    ...github.context.repo,
+    state: "open",
+  });
+  const currentPullRequest = pullRequests.data.find(
+    (pull) => pull.number === github.context.payload.pull_request.number
+  );
 
-  const actionPullNumber = github.context.payload.pull_request.number;
-
-  const pulls = await ghApi.pulls.list({ ...github.context.repo });
-
-  const actionPull = pulls.data.find(pull => pull.number === actionPullNumber);
-
-  if (!actionPull) {
-    console.warn('Pull request not found');
-    return core.setOutput('should-deploy', false);
+  if (!currentPullRequest) {
+    return core.setFailed("Pull request not found");
   }
 
-  const hasEnvLabel = actionPull.labels.map(l => l.name).includes(envLabel);
-
-  if (hasEnvLabel) {
-    // remove the label from other pulls
-    pulls.data.forEach(pull => {
-      if (pull.number === actionPullNumber) {
-        return;
-      }
-      const shouldRemoveLabel = pull.labels.map(l => l.name).includes(envLabel);
-      if (shouldRemoveLabel) {
+  // Remove labels from other pull requests
+  pullRequests.data
+    .filter((pullRequest) => pullRequest.number !== currentPullRequest.number)
+    .forEach((pullRequest) => {
+      const labelsToRemove = pullRequest.labels.filter((label) =>
+        currentPullRequest.labels.some((l) => l.name === label.name)
+      );
+      labelsToRemove.forEach((label) =>
         ghApi.issues.removeLabel({
           ...github.context.repo,
-          issue_number: pull.number,
-          name: envLabel
-        });
-      }
-    })
-  }
+          issue_number: pullRequest.number,
+          name: label.name,
+        })
+      );
+    });
 
-  core.setOutput('should-deploy', hasEnvLabel);
+  // Get the labels of the pull request that are in the format of environment-service and output them as contexts
+  core.setOutput(
+    "contexts",
+    currentPullRequest.labels
+      .filter(
+        (label) => (label.name || "").toLowerCase().split("-").length === 2
+      )
+      .map((label) => {
+        const [environment, service] = (label.name || "")
+          .toLowerCase()
+          .split("-");
+        return {
+          environment,
+          service,
+        };
+      })
+  );
 }
 
 async function run() {
   try {
-    if (github.context.eventName === 'pull_request' && github.context.payload.action === 'unlabeled') {
+    if (
+      github.context.eventName === "pull_request" &&
+      github.context.payload.action === "unlabeled"
+    ) {
       await onLabelRemoved();
-    } else if (github.context.eventName === 'pull_request') {
+    } else if (github.context.eventName === "pull_request") {
       await onPull();
-    } else if (github.context.eventName === 'repository_dispatch') {
-      await onTriggerMain();
-    } else if (github.context.eventName === 'push') {
+    } else if (
+      (github.context.eventName === "push" &&
+        github.context.ref === "refs/heads/main") ||
+      github.context.ref === "refs/heads/master"
+    ) {
       await onPushMain();
-    } else if (github.context.eventName === 'issues') {
+    } else if (github.context.eventName === "issues") {
       await onLabelRemoved();
     }
   } catch (error) {
