@@ -1,18 +1,12 @@
 name: "Smart CI triggers"
 description: "Smartly trigger CI based on the use of pull request labels"
 inputs:
-  action-github-token:
-    description: "the github token provided by the action which will not trigger other actions"
-    required: true
-  personal-github-token:
-    description: "the personal token needed to automatically trigger workflows"
-    required: true
-  env-label:
-    description: "The label corresponding to the CI environment"
+  token:
+    description: "The github token used to interact with the github API"
     required: true
 outputs:
-  should-deploy:
-    description: 'returns "true" if the current ref should be deployed on the CI environment, "false" otherwise'
+  contexts:
+    description: "The contexts generated from labels on pull requests"
 runs:
   using: "node20"
   main: "dist/index.js"
