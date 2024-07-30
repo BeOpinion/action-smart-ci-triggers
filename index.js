@@ -101,15 +101,11 @@ async function onPull() {
     (pull) => pull.number === github.context.payload.pull_request.number
   );
 
-  core.debug(
-    `Current pull request labels: ${currentPullRequest.data
-      .map((pullRequest) => pullRequest.labels)
-      .flat()}`
-  );
-
   if (!currentPullRequest) {
     return core.setFailed("Pull request not found");
   }
+
+  core.debug(`Current pull request labels: ${currentPullRequest.labels}`);
 
   // Remove labels from other pull requests
   pullRequests.data
