@@ -10350,7 +10350,10 @@ const actionGithubToken = core.getInput("token");
 
 // Return the contexts based on the label that was removed
 async function onLabelRemoved() {
+  core.info("Label removed event");
   const labelRemoved = github.context.payload.label.name;
+
+  core.debug(`Label removed: ${labelRemoved}`);
 
   // Not a valid label. Do nothing.
   if (labelRemoved.split("-").length !== 2) {
@@ -10374,12 +10377,20 @@ async function onLabelRemoved() {
 
 // Return the contexts based on the labels of all open pull requests
 async function onPushMain() {
+  core.info("Push to main event");
   const ghApi = github.getOctokit(actionGithubToken);
 
   const pullRequests = await ghApi.pulls.list({
     ...github.context.repo,
     state: "open",
   });
+
+  core.debug(`Pull requests count: ${pullRequests.data.length}`);
+  core.debug(
+    `Pull requests labels: ${pullRequests.data
+      .map((pullRequest) => pullRequest.labels)
+      .flat()}`
+  );
 
   const labels = [
     ...new Set(
@@ -10392,6 +10403,8 @@ async function onPushMain() {
         .flat()
     ),
   ];
+
+  core.debug(`Deployment labels: ${labels}`);
 
   core.setOutput(
     "contexts",
@@ -10413,6 +10426,7 @@ async function onPushMain() {
 
 // Return the contexts based on the labels of the current pull request and remove the labels from other pull requests
 async function onPull() {
+  core.info("Pull request event");
   const ghApi = github.getOctokit(actionGithubToken);
   const pullRequests = await ghApi.pulls.list({
     ...github.context.repo,
@@ -10420,6 +10434,12 @@ async function onPull() {
   });
   const currentPullRequest = pullRequests.data.find(
     (pull) => pull.number === github.context.payload.pull_request.number
+  );
+
+  core.debug(
+    `Current pull request labels: ${currentPullRequest.data
+      .map((pullRequest) => pullRequest.labels)
+      .flat()}`
   );
 
   if (!currentPullRequest) {
