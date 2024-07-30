@@ -10386,11 +10386,6 @@ async function onPushMain() {
   });
 
   core.debug(`Pull requests count: ${pullRequests.data.length}`);
-  core.debug(
-    `Pull requests labels: ${pullRequests.data
-      .map((pullRequest) => pullRequest.labels)
-      .flat()}`
-  );
 
   const labels = [
     ...new Set(
@@ -10399,28 +10394,23 @@ async function onPushMain() {
           pullRequest.labels
             .map((label) => label.name)
             .filter((label) => label !== undefined)
+            .filter((label) => label.toLowerCase().split("-").length === 2)
         )
         .flat()
     ),
   ];
 
-  core.debug(`Deployment labels: ${labels}`);
+  core.debug(`Pull request valid labels: ${labels}`);
 
   core.setOutput(
     "contexts",
-    labels
-      .filter(
-        (label) => (label.name || "").toLowerCase().split("-").length === 2
-      )
-      .map((label) => {
-        const [environment, service] = (label.name || "")
-          .toLowerCase()
-          .split("-");
-        return {
-          environment,
-          service,
-        };
-      })
+    labels.map((label) => {
+      const [environment, service] = label.toLocaleLowerCase().split("-");
+      return {
+        environment,
+        service,
+      };
+    })
   );
 }
 
