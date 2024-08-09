@@ -10436,8 +10436,10 @@ async function onPull() {
   pullRequests.data
     .filter((pullRequest) => pullRequest.number !== currentPullRequest.number)
     .forEach((pullRequest) => {
-      const labelsToRemove = pullRequest.labels.filter((label) =>
-        currentPullRequest.labels.some((l) => l.name === label.name)
+      const labelsToRemove = pullRequest.labels.filter(
+        (label) =>
+          currentPullRequest.labels.some((l) => l.name === label.name) &&
+          (label.name || "").toLowerCase().split("-").length === 2
       );
       labelsToRemove.forEach((label) =>
         ghApi.issues.removeLabel({
