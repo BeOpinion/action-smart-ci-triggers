@@ -10350,36 +10350,50 @@ const actionGithubToken = core.getInput("token");
 
 // Return the contexts based on the label that was removed
 async function onLabelRemoved() {
-  core.info("Label removed event");
-  const labelRemoved = github.context.payload.label.name;
-
+  const labelRemoved = (
+    github.context.payload.label.name || ""
+  ).toLocaleLowerCase();
   core.debug(`Label removed: ${labelRemoved}`);
 
   // Not a valid label. Do nothing.
   if (labelRemoved.split("-").length !== 2) {
+    core.setOutput("contexts", []);
+    return;
+  }
+
+  const ghApi = github.getOctokit(actionGithubToken);
+  const pullRequests = await ghApi.pulls.list({
+    ...github.context.repo,
+    state: "open",
+  });
+  const otherPullRequests = pullRequests.data.filter(
+    (pullRequest) =>
+      pullRequest.number !== github.context.payload.pull_request.number
+  );
+  const otherPRLabels = otherPullRequests
+    .flatMap((pullRequest) =>
+      pullRequest.labels.map((label) => (label.name || "").toLocaleLowerCase())
+    )
+    .filter((label) => label.split("-").length === 2);
+
+  // Already on another pull request. Do nothing.
+  if (otherPRLabels.includes(labelRemoved)) {
+    core.setOutput("contexts", []);
     return;
   }
 
   const [environment, service] = labelRemoved.toLowerCase().split("-");
-
-  core.setOutput(
-    "contexts",
-    labelRemoved.toLowerCase().split("-").length === 2
-      ? [
-          {
-            environment,
-            service,
-          },
-        ]
-      : []
-  );
+  core.setOutput("contexts", [
+    {
+      environment,
+      service,
+    },
+  ]);
 }
 
 // Return the contexts based on the labels of all open pull requests
 async function onPushMain() {
-  core.info("Push to main event");
   const ghApi = github.getOctokit(actionGithubToken);
-
   const pullRequests = await ghApi.pulls.list({
     ...github.context.repo,
     state: "open",
@@ -10390,13 +10404,10 @@ async function onPushMain() {
   const labels = [
     ...new Set(
       pullRequests.data
-        .map((pullRequest) =>
-          pullRequest.labels
-            .map((label) => label.name)
-            .filter((label) => label !== undefined)
-            .filter((label) => label.toLowerCase().split("-").length === 2)
+        .flatMap((pullRequest) =>
+          pullRequest.labels.map((label) => (label.name || "").toLowerCase())
         )
-        .flat()
+        .filter((label) => label.split("-").length === 2)
     ),
   ];
 
@@ -10416,84 +10427,97 @@ async function onPushMain() {
 
 // Return the contexts based on the labels of the current pull request and remove the labels from other pull requests
 async function onPull() {
-  core.info("Pull request event");
   const ghApi = github.getOctokit(actionGithubToken);
   const pullRequests = await ghApi.pulls.list({
     ...github.context.repo,
     state: "open",
   });
   const currentPullRequest = pullRequests.data.find(
-    (pull) => pull.number === github.context.payload.pull_request.number
+    (pullRequest) =>
+      pullRequest.number === github.context.payload.pull_request.number
+  );
+  const otherPullRequests = pullRequests.data.filter(
+    (pullRequest) =>
+      pullRequest.number !== github.context.payload.pull_request.number
   );
 
   if (!currentPullRequest) {
     return core.setFailed("Pull request not found");
   }
 
-  core.debug(`Current pull request labels: ${currentPullRequest.labels}`);
+  const labels = currentPullRequest.labels
+    .map((label) => (label.name || "").toLocaleLowerCase())
+    .filter((label) => label.split("-").length === 2);
 
-  // Remove labels from other pull requests
-  pullRequests.data
-    .filter((pullRequest) => pullRequest.number !== currentPullRequest.number)
-    .forEach((pullRequest) => {
-      const labelsToRemove = pullRequest.labels.filter(
-        (label) =>
-          currentPullRequest.labels.some((l) => l.name === label.name) &&
-          (label.name || "").toLowerCase().split("-").length === 2
-      );
-      labelsToRemove.forEach((label) =>
-        ghApi.issues.removeLabel({
-          ...github.context.repo,
-          issue_number: pullRequest.number,
-          name: label.name,
-        })
+  core.debug(`Current pull request labels: ${labels}`);
+
+  otherPullRequests.forEach((pullRequest) => {
+    const labelsToRemove = pullRequest.labels.filter((label) => {
+      const formattedLabel = (label.name || "").toLocaleLowerCase();
+
+      return (
+        labels.includes(formattedLabel) &&
+        formattedLabel.split("-").length === 2
       );
     });
+
+    labelsToRemove.forEach((label) =>
+      ghApi.issues.removeLabel({
+        ...github.context.repo,
+        issue_number: pullRequest.number,
+        name: label.name,
+      })
+    );
+  });
 
   // Get the labels of the pull request that are in the format of environment-service and output them as contexts
   core.setOutput(
     "contexts",
-    currentPullRequest.labels
-      .filter(
-        (label) => (label.name || "").toLowerCase().split("-").length === 2
-      )
-      .map((label) => {
-        const [environment, service] = (label.name || "")
-          .toLowerCase()
-          .split("-");
-        return {
-          environment,
-          service,
-        };
-      })
+    labels.map((label) => {
+      const [environment, service] = label.split("-");
+
+      return {
+        environment,
+        service,
+      };
+    })
   );
 }
 
-async function run() {
+async function dispatch() {
   try {
-    if (
-      github.context.eventName === "pull_request" &&
-      github.context.payload.action === "unlabeled"
-    ) {
-      await onLabelRemoved();
-    } else if (github.context.eventName === "pull_request") {
-      await onPull();
-    } else if (
-      (github.context.eventName === "push" &&
-        github.context.ref === "refs/heads/main") ||
-      github.context.ref === "refs/heads/master"
-    ) {
-      await onPushMain();
-    } else if (github.context.eventName === "issues") {
-      await onLabelRemoved();
+    switch (github.context.eventName) {
+      case "pull_request":
+        core.info("Pull request event");
+
+        if (github.context.payload.action === "unlabeled") {
+          core.info("Unlabeled workflow started");
+          await onLabelRemoved();
+        } else {
+          core.info("Pull request workflow started");
+          await onPull();
+        }
+        break;
+      case "push":
+        core.info("Push event");
+
+        if (
+          github.context.ref === "refs/heads/main" ||
+          github.context.ref === "refs/heads/master"
+        ) {
+          core.info("Push to main workflow started");
+          await onPushMain();
+        }
+        break;
+      default:
+        core.setFailed("Unsupported event");
     }
   } catch (error) {
-    console.error(error);
     core.setFailed(error.message);
   }
 }
 
-run();
+dispatch();
 
 })();
 
