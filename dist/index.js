@@ -10348,6 +10348,16 @@ const github = __nccwpck_require__(5438);
 
 const actionGithubToken = core.getInput("token");
 
+function isValidLabel(label) {
+  return label.split("-").length >= 2;
+}
+
+function getLabelContext(label) {
+  const [environment, ...services] = label.split("-");
+  const service = services.join("-");
+  return { environment, service };
+}
+
 // Return the contexts based on the label that was removed
 async function onLabelRemoved() {
   const labelRemoved = (
@@ -10356,7 +10366,7 @@ async function onLabelRemoved() {
   core.debug(`Label removed: ${labelRemoved}`);
 
   // Not a valid label. Do nothing.
-  if (labelRemoved.split("-").length !== 2) {
+  if (!isValidLabel(labelRemoved)) {
     core.setOutput("contexts", []);
     return;
   }
@@ -10374,7 +10384,7 @@ async function onLabelRemoved() {
     .flatMap((pullRequest) =>
       pullRequest.labels.map((label) => (label.name || "").toLocaleLowerCase())
     )
-    .filter((label) => label.split("-").length === 2);
+    .filter(isValidLabel);
 
   // Already on another pull request. Do nothing.
   if (otherPRLabels.includes(labelRemoved)) {
@@ -10382,13 +10392,7 @@ async function onLabelRemoved() {
     return;
   }
 
-  const [environment, service] = labelRemoved.toLowerCase().split("-");
-  core.setOutput("contexts", [
-    {
-      environment,
-      service,
-    },
-  ]);
+  core.setOutput("contexts", [getLabelContext(labelRemoved)]);
 }
 
 // Return the contexts based on the labels of all open pull requests
@@ -10407,22 +10411,12 @@ async function onPushMain() {
         .flatMap((pullRequest) =>
           pullRequest.labels.map((label) => (label.name || "").toLowerCase())
         )
-        .filter((label) => label.split("-").length === 2)
+        .filter(isValidLabel)
     ),
   ];
 
   core.debug(`Pull request valid labels: ${labels}`);
-
-  core.setOutput(
-    "contexts",
-    labels.map((label) => {
-      const [environment, service] = label.toLocaleLowerCase().split("-");
-      return {
-        environment,
-        service,
-      };
-    })
-  );
+  core.setOutput("contexts", labels.map(getLabelContext));
 }
 
 // Return the contexts based on the labels of the current pull request and remove the labels from other pull requests
@@ -10447,7 +10441,7 @@ async function onPull() {
 
   const labels = currentPullRequest.labels
     .map((label) => (label.name || "").toLocaleLowerCase())
-    .filter((label) => label.split("-").length === 2);
+    .filter(isValidLabel);
 
   core.debug(`Current pull request labels: ${labels}`);
 
@@ -10455,10 +10449,7 @@ async function onPull() {
     const labelsToRemove = pullRequest.labels.filter((label) => {
       const formattedLabel = (label.name || "").toLocaleLowerCase();
 
-      return (
-        labels.includes(formattedLabel) &&
-        formattedLabel.split("-").length === 2
-      );
+      return labels.includes(formattedLabel) && isValidLabel(formattedLabel);
     });
 
     labelsToRemove.forEach((label) =>
@@ -10471,17 +10462,7 @@ async function onPull() {
   });
 
   // Get the labels of the pull request that are in the format of environment-service and output them as contexts
-  core.setOutput(
-    "contexts",
-    labels.map((label) => {
-      const [environment, service] = label.split("-");
-
-      return {
-        environment,
-        service,
-      };
-    })
-  );
+  core.setOutput("contexts", labels.map(getLabelContext));
 }
 
 async function dispatch() {
