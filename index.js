@@ -101,12 +101,14 @@ async function onPull() {
   );
 
   if (!currentPullRequest) {
-    return core.setFailed("Pull request not found");
+    core.warning("Pull request not found");
   }
 
-  const labels = currentPullRequest.labels
-    .map((label) => (label.name || "").toLocaleLowerCase())
-    .filter(isValidLabel);
+  const labels = currentPullRequest
+    ? currentPullRequest.labels
+        .map((label) => (label.name || "").toLocaleLowerCase())
+        .filter(isValidLabel)
+    : [];
 
   core.debug(`Current pull request labels: ${labels}`);
 
