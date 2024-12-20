@@ -20,6 +20,7 @@ The behavior of the action depends on the event that triggered the workflow:
 
 - `environment`: The environment designated by the label
 - `service`: The service designated by the label
+- `region`: The region used for staging environments
 
 This action return an array of contexts under the `contexts` output.
 
@@ -36,11 +37,13 @@ The output will be:
 [
   {
     "environment": "staging",
-    "service": "api"
+    "service": "api",
+    "region": "eu-west-1"
   },
   {
     "environment": "staging",
-    "service": "web"
+    "service": "web",
+    "region": "eu-west-1"
   }
 ]
 ```
