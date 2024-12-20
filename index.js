@@ -3,6 +3,7 @@
 // [
 //   {
 //     "environment": "stage",
+//     "region": "eu-west-1",
 //     "service": "data-preview",
 //   },
 //   ...
@@ -20,7 +21,7 @@ function isValidLabel(label) {
 function getLabelContext(label) {
   const [environment, ...services] = label.split("-");
   const service = services.join("-");
-  return { environment, service };
+  return { environment, region: "eu-west-1", service };
 }
 
 // Return the contexts based on the label that was removed
