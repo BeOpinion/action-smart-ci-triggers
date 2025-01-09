@@ -15,7 +15,7 @@ const github = require("@actions/github");
 const actionGithubToken = core.getInput("token");
 
 function isValidLabel(label) {
-  return label.split("-").length >= 2;
+  return label.split("-").length >= 2 && !label.trim().includes(" ");
 }
 
 function getLabelContext(label) {

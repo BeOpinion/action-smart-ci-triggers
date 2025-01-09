@@ -10350,7 +10350,7 @@ const github = __nccwpck_require__(5438);
 const actionGithubToken = core.getInput("token");
 
 function isValidLabel(label) {
-  return label.split("-").length >= 2;
+  return label.split("-").length >= 2 && !label.trim().includes(" ");
 }
 
 function getLabelContext(label) {
