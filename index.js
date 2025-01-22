@@ -152,7 +152,8 @@ async function dispatch() {
 
         if (
           github.context.ref === "refs/heads/main" ||
-          github.context.ref === "refs/heads/master"
+          github.context.ref === "refs/heads/master" ||
+          github.context.ref.startsWith("refs/tags/")
         ) {
           core.info("Push to main workflow started");
           await onPushMain();
